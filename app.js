@@ -10,63 +10,42 @@ const chalk = require('chalk')
 puppeteer.use(StealthPlugin())
 puppeteer.use(AdblockerPlugin({ blockTrackers: true }))
 
+const { uniqueNamesGenerator, names } = require('unique-names-generator')
+
+const config = {
+  dictionaries: [names],
+}
+
 const fs = require('fs-extra')
 
 // settings
-const {
-  headless,
-  minTracks,
-  maxTracks,
-  trackNames,
-  releaseNames,
-  forcedGenre,
-  supportedGenres,
-  useVCC,
-  devMode,
-} = require('./settings.json')
+const { headless, devMode } = require('./settings.json')
 
 // import accounts
-const rawAccounts = fs
-  .readFileSync('./accounts.txt')
-  .toString()
-  .split('\r\n')
-  .filter((rawAccount) => rawAccount !== '')
-
-const accounts = rawAccounts
-  .map((account) => {
-    const [email, password, genre, songWriterName] = account.split(':')
-    return { email, password, genre, songWriterName }
-  })
-  .filter((account) => account.email !== '')
-const rawVccs = fs
-  .readFileSync('./vcc.txt')
-  .toString()
-  .split('\r\n')
-  .filter((rawVcc) => rawVcc != '')
-
-const vccs = rawVccs.map((vcc) => {
-  const [cardNumber, expiry, cvc, cardName] = vcc.split(':')
-  return { cardNumber, expiry, cvc, cardName }
-})
-
-const songWriterNames = fs
-  .readFileSync('./songWriterNames.txt')
-  .toString()
-  .split('\r\n')
-  .filter((name) => name != '')
 const proxies = fs
   .readFileSync('./proxies.txt')
   .toString()
   .split('\r\n')
   .filter((proxy) => proxy !== '')
 
-// report json
-const defaultErrorData = require('./reports/errorData.json')
-const defaultUsedData = require('./reports/usedData.json')
+const rawData = fs
+  .readFileSync('./data.txt')
+  .toString()
+  .split('\r\n')
+  .filter((datum) => datum !== '')
 
-// app states
-let usedData = [...defaultUsedData]
-let errorData = [...defaultErrorData]
+const data = rawData.map((rawDatum) => {
+  const [email, password, verifyLink1, verifyLink2] = rawDatum.split(':')
+  return { email, password, verifyLink: `${verifyLink1}:${verifyLink2}` }
+})
+
+// // report json
+// const defaultErrorData = require('./reports/errorData.json')
+// const defaultUsedData = require('./reports/usedData.json')
+
+// // app states
+// let usedData = [...defaultUsedData]
+// let errorData = [...defaultErrorData]
 
 // support functions
 function checkForDuplicates(array) {
@@ -332,48 +311,62 @@ const getUnusedTrackNames = (genre, noOfWantedTracks) => {
   return improvedTrackNames
 }
 
-const generateData = async (account) => {
-  const noOfWantedTracks = getRandom(minTracks, maxTracks)
+const generateData = async (data) => {
+  // verifyLink
+  const verifyLink = data.verifyLink
 
-  let genre
+  // first name last name
+  const nameParts = data.email
+    .split('@')[0]
+    .replace(/[0-9]/g, '')
+    .match(/[A-Z][a-z]+|[0-9]+/g)
+    .join(' ')
 
-  if (account.genre) {
-    genre = account.genre
+  const firstName = nameParts.split(' ')[0]
+  const lastName = nameParts.split(' ')[1]
+
+  // artist name
+  let artistName1, artistName2, artistName3, artistName
+  if (getRandom(0, 1) < 1) {
+    artistName1 = faker.name.firstName()
   } else {
-    genre = supportedGenres.includes(forcedGenre)
-      ? forcedGenre
-      : supportedGenres[getRandom(0, supportedGenres.length - 1)]
+    artistName1 = uniqueNamesGenerator(config)
   }
-
-  const tracks = await getUnusedTracks(genre, noOfWantedTracks)
-  const art = await getUnusedArt()
-  const releaseName = getUnunsedReleaseName(genre)
-
-  let songWriterName
-  if (account.songWriterName) {
-    songWriterName = account.songWriterName
+  if (getRandom(0, 1) < 1) {
+    artistName2 = faker.name.lastName()
   } else {
-    songWriterName = getUnusedSongWriter()
+    artistName2 = uniqueNamesGenerator(config)
+  }
+  if (getRandom(0, 1) < 1) {
+    artistName3 = `${getRandomName(faker.name.firstName(), getRandom(3, 6))}`
+  } else {
+    artistName3 = `${getRandomName(
+      uniqueNamesGenerator(config),
+      getRandom(3, 6),
+    )}`
+  }
+  if (getRandom(0, 1) < 1) {
+    artistName = `${artistName1} ${artistName2} ${artistName3}`
+  } else {
+    artistName = `${artistName1} ${artistName3} ${artistName2}`
   }
 
-  const trackNames = getUnusedTrackNames(genre, noOfWantedTracks)
+  // password
+  const password = data.password
+  // location
 
-  let vcc = null
-  if (useVCC) {
-    vcc = await getUnusedVCC()
-  }
+  // genre
 
-  const data = {
-    account,
-    genre,
-    tracks,
-    trackNames,
-    songWriterName,
-    releaseName,
-    art,
-    vcc,
+  const genData = {
+    verifyLink,
+    firstName,
+    lastName,
+    artistName,
+    password,
+    location: 'london',
+    genre: 'Pop',
   }
-  return data
+  return genData
 }
 const optimize = async (page) => {
   await page.setRequestInterception(true)
@@ -392,7 +385,7 @@ const optimize = async (page) => {
 const createRelease = async (page) => {
   try {
     // go to /upload
-    await page.waitFor(3000)
+    await page.waitForTimeout(3000)
     await page.goto('https://unitedmasters.com/uploads', {
       waitUntil: 'domcontentloaded',
     })
@@ -433,7 +426,7 @@ const uploadFiles = async (
     console.log('uploading files')
     await fileChooser.accept(files)
 
-    await page.waitFor(2000)
+    await page.waitForTimeout(2000)
     let uploadConfirm
     if (numberOfRequest > 1) {
       let counter = 0
@@ -481,7 +474,7 @@ const handleLowQualitySongs = async (page) => {
   }
 }
 const handleConnectionLost = async (page, tracks) => {
-  await page.waitFor(3000)
+  await page.waitForTimeout(3000)
   try {
     await page.waitForXPath("//div[contains(., 'Okay, got it')]", {
       visible: true,
@@ -507,7 +500,7 @@ const handleConnectionLost = async (page, tracks) => {
       // for (let i = 0; i < removesButtons.length; i++) {
       //   if (removesButtons[i].isIntersectingViewport()) {
       //     await removesButtons[i].click({ delay: 200 })
-      //     await page.waitFor(1000)
+      //     await page.waitForTimeout(1000)
       //   }
       // }
 
@@ -528,7 +521,7 @@ const handleConnectionLost = async (page, tracks) => {
   }
 }
 const handleNext = async (page, correctIndex) => {
-  await page.waitFor(3000)
+  await page.waitForTimeout(3000)
   try {
     await page.waitForXPath("//button[contains(., 'Next')]")
     const nextButtons = await page.$x("//button[contains(., 'Next')]")
@@ -537,7 +530,7 @@ const handleNext = async (page, correctIndex) => {
       page.waitForNavigation(),
       correctNextButton.click({ delay: 200 }),
     ])
-    await page.waitFor(3000)
+    await page.waitForTimeout(3000)
   } catch (error) {
     console.log('handle next 1 error', error)
     throw '500 Internal Service Error'
@@ -608,295 +601,129 @@ const handleSaveReportAndRemove = async () => {
 }
 
 // main processes
-const handleLogin = async (page, email, password) => {
-  await page.goto('https://unitedmasters.com/account/login', {
-    waitUntil: 'domcontentloaded',
-  })
-
-  await page.waitForSelector('input[placeholder=Email')
-  await page.type('input[placeholder=Email]', email, {
-    delay: 100,
-  })
-
-  await page.waitForSelector('input[placeholder=Password]')
-  await page.type('input[placeholder=Password]', password, {
-    delay: 100,
-  })
-
-  const [response] = await Promise.all([
-    page.waitForNavigation({ timeout: 30000 }),
-    page.click('button[type=submit]', { delay: 500 }),
-    page.waitForResponse(
-      (response) =>
-        response
-          .url()
-          .includes(
-            'https://www.googleapis.com/identitytoolkit/v3/relyingparty/verifyPasswor',
-          ) && response.status() === 200,
-    ),
-  ])
-}
-
-const handleVcc = async (page, vcc) => {
-  const { cardNumber, cardName, expiry, cvc } = vcc
-  await page.waitFor(2000)
-  await page.goto('https://unitedmasters.com/membership', {
-    waitUntil: 'load',
-  })
-
-  await page.waitForXPath("//button[contains(., 'Start free 14-day trial')]")
-  const freeTrialButtons = await page.$x(
-    "//button[contains(., 'Start free 14-day trial')]",
-  )
-  const correctFreeTrialButton = freeTrialButtons[0]
-
-  await Promise.all([
-    page.waitForNavigation(),
-    correctFreeTrialButton.click({ delay: 200 }),
-  ])
-  await page.waitFor(2000)
-
-  await page.waitForSelector('input[id=cardNumber]')
-  await page.type('input[id=cardNumber]', cardNumber, {
-    delay: 100,
-  })
-
-  await page.waitForSelector('input[id=cardExpiry]')
-  await page.type('input[id=cardExpiry]', expiry, {
-    delay: 100,
-  })
-
-  await page.waitForSelector('input[id=cardCvc]')
-  await page.type('input[id=cardCvc]', cvc, {
-    delay: 100,
-  })
-
-  await page.waitForSelector('input[id=billingName]')
-  await page.type('input[id=billingName]', cardName, {
-    delay: 100,
-  })
-
-  const blackListcountrySelectValues = ['GB', 'US']
-  const ramdomCountriesToSelect = ['KH', 'FI', 'NL', 'NO', 'IT', 'DE']
-
-  const countrySelectValue = await page.$eval(
-    'select[id=billingCountry]',
-    (el) => el.value,
-  )
-
-  if (blackListcountrySelectValues.includes(countrySelectValue)) {
-    const newSelectedCountry = getRandomFromArr(ramdomCountriesToSelect, 1)[0]
-    await page.select('select[id=billingCountry]', newSelectedCountry)
-  }
-
-  await page.waitForXPath("//span[contains(., 'Start trial')]")
-  const startFreeTrialButtons = await page.$x(
-    "//span[contains(., 'Start trial')]",
-  )
-  const correctStartFreeTrialButton = startFreeTrialButtons[0]
-
-  await Promise.all([
-    page.waitForNavigation(),
-    correctStartFreeTrialButton.click({ delay: 200 }),
-  ])
-}
-
-const handleAddTracks = async (page, tracks) => {
-  await createRelease(page)
-  await uploadFiles(
-    page,
-    tracks,
-    'https://unitedmasters.com/studio/create-track',
-    1200000,
-    "//a[contains(., 'browse your')]",
-    tracks.length,
-  )
-
-  await handleLowQualitySongs(page)
-  await handleConnectionLost(page, tracks)
-  await handleNext(page, 1)
-}
-const handleArtwork = async (page, art) => {
-  await page.reload()
-
-  await page.waitForXPath("//h2[contains(., 'Add Album Art')]", {
-    timeout: 60000,
-  })
-  //handle upload art
-  await uploadFiles(
-    page,
-    [art],
-    'https://unitedmasters.com/studio/create-asset',
-    300000,
-  )
-  await handleNext(page, 1)
-}
-const handleDetails = async (
-  page,
-  releaseName,
-  genre,
-  songWriter,
-  trackNames,
-) => {
-  // handle release title
-  await page.waitForSelector('input[placeholder*="Enter release title"]')
-  const releaseTitleInput = await page.$(
-    'input[placeholder*="Enter release title"]',
-  )
-  await releaseTitleInput.type(releaseName, { delay: 100 })
-
-  // handle genre
-  await page.waitForXPath('//label[contains(., "Genre")]/select')
-  let genreButtons = await page.$x('//label[contains(., "Genre")]/select')
-  await genreButtons[0].select(genre)
-
-  // handle track name
-  await page.waitForSelector('input[placeholder*="Add title for"]')
-  const trackNameInputs = await page.$$('input[placeholder*="Add title for"]')
-
-  for (let i = 0; i < trackNameInputs.length; i++) {
-    await trackNameInputs[i].type(trackNames[i], { delay: 100 })
-  }
-
-  // handle song writer name
-  await page.waitForSelector('input[placeholder*="Enter Legal Nam"]')
-  let songWritterInputs = await page.$$('input[placeholder*="Enter Legal Nam"]')
-
-  let tempMax = songWritterInputs.length
-
-  for (let i = 0; i < tempMax; i++) {
-    await page.waitForSelector('input[placeholder*="Enter Legal Nam"]')
-    let songWritterInputs = await page.$$(
-      'input[placeholder*="Enter Legal Nam"]',
-    )
-    await songWritterInputs[i].type(songWriter, { delay: 100 })
-  }
-
-  // handle explicit content
-
-  await page.waitForXPath(
-    '//label[contains(., "Explicit Content")]/div/div[contains(@class,"Select-control")]',
-    { visible: true },
-  )
-  let explicitContents = await page.$x(
-    '//label[contains(., "Explicit Content")]/div/div[contains(@class,"Select-control")]',
-  )
-  for (const explicitContent of explicitContents) {
-    await explicitContent.click({ delay: 200 })
-
-    await page.waitForXPath(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"This track contains no explicit language or themes.")]',
-      { visible: true },
-    )
-    let notExplicitButtons = await page.$x(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"This track contains no explicit language or themes.")]',
-    )
-    await notExplicitButtons[0].click({ delay: 200 })
-  }
-
-  // handle radio edit
-
-  await page.waitForXPath(
-    '//label[contains(., "Is this a radio edit?")]/div/div[contains(@class,"Select-control")]',
-    { visible: true },
-  )
-  let radioEdits = await page.$x(
-    '//label[contains(., "Is this a radio edit?")]/div/div[contains(@class,"Select-control")]',
-  )
-  for (const radioEdit of radioEdits) {
-    await radioEdit.click({ delay: 200 })
-
-    await page.waitForXPath(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"This song is clean and always has been.")]',
-      { visible: true },
-    )
-    let noButtons = await page.$x(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"This song is clean and always has been.")]',
-    )
-    await noButtons[0].click({ delay: 200 })
-  }
-
-  // handle intrumental content
-  await page.waitForXPath(
-    '//label[contains(., "Instrumental")]/div/div[contains(@class,"Select-control")]',
-    { visible: true },
-  )
-  let intrumentals = await page.$x(
-    '//label[contains(., "Instrumental")]/div/div[contains(@class,"Select-control")]',
-  )
-  for (const intrumental of intrumentals) {
-    await intrumental.click({ delay: 200 })
-
-    await page.waitForXPath(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"Yes, this track is an instrumental")]',
-      { visible: true },
-    )
-    let yesIntrumentals = await page.$x(
-      '//div[contains(@class, "Select-menu-outer")]/div/div/div[contains(.,"Yes, this track is an instrumental")]',
-    )
-    await yesIntrumentals[0].click({ delay: 200 })
-  }
-
-  // handle next
-  await handleNext(page, 0)
-}
-const handleReleaseDate = async (page) => {
-  await handleNext(page, 0)
-}
-const handleSubmit = async (page) => {
-  await page.click('#original', { delay: 200 })
-  await page.click('#toc', { delay: 200 })
-  await page.waitFor(3000)
-  await page.waitForXPath("//button[contains(., 'Submit')]")
-  const submitButtons = await page.$x("//button[contains(., 'Submit')]")
-  const correctSubmitButton = submitButtons[0]
-  await Promise.all([
-    page.waitForNavigation(),
-    correctSubmitButton.click({ delay: 200 }),
-  ])
-  await page.waitFor(3000)
-}
 
 // enhanced processes
-const enhancedLogin = enhance('handle login', handleLogin)
-const enhandedHandleVcc = enhance('handle Vcc', handleVcc)
-const enhancedHandleAddTracks = enhance('handle add tracks', handleAddTracks)
-const enhancedHandleArtwork = enhance('handle artwork', handleArtwork)
-const enhancedHandleDetails = enhance('handle details', handleDetails)
-const enhancedHandleReleaseDate = enhance(
-  'handle release date',
-  handleReleaseDate,
-)
-const enhancedHandleSubmit = enhance('handle submit', handleSubmit)
 
 const handleAutoProcesses = async (page, data) => {
   try {
-    await enhancedLogin(page, data.account.email, data.account.password)
-    if (useVCC) {
-      await enhandedHandleVcc(page, data.vcc)
+    console.log('watch me start process')
+
+    // login
+    await page.goto(data.verifyLink, {})
+    await page.waitForTimeout(3000)
+    await page.waitForSelector('input[placeholder=Password]')
+    await page.type('input[placeholder=Password]', data.password, {
+      delay: 200,
+    })
+    await page.click('#terms', {
+      delay: 200,
+    })
+
+    await page.waitForTimeout(3000)
+    await page.reload()
+
+    const maxRetryNumber = 100
+    for (let retryNumber = 1; retryNumber <= maxRetryNumber; retryNumber++) {
+      try {
+        await page.waitForTimeout(3000)
+        await page.waitForSelector('input[placeholder=Password]')
+        await page.type('input[placeholder=Password]', data.password, {
+          delay: 200,
+        })
+        await page.click('#terms', {
+          delay: 200,
+        })
+        await page.waitForTimeout(3000)
+        page.setCacheEnabled(false)
+        await Promise.all([
+          page.waitForNavigation({ timeout: 30000 }),
+          page.click('button[type=submit]', { delay: 500 }),
+          page.waitForResponse(
+            (response) =>
+              response
+                .url()
+                .includes('https://unitedmasters.com/account/accept-invite') &&
+              response.status() === 200,
+          ),
+        ])
+
+        break
+      } catch (e) {
+        await page.waitForTimeout(3000)
+        page.setCacheEnabled(false)
+        await page.reload()
+      }
     }
-    await enhancedHandleAddTracks(page, data.tracks)
-    await enhancedHandleArtwork(page, data.art)
-    await enhancedHandleDetails(
-      page,
-      data.releaseName,
-      data.genre,
-      data.songWriterName,
-      data.trackNames,
-    )
-    await enhancedHandleReleaseDate(page)
-    await enhancedHandleSubmit(page)
+
+    // handle info
+    await page.waitForTimeout(3000)
+    await page.type('input[placeholder="Artist name"]', data.artistName, {
+      delay: 200,
+    })
+    await page.type('input[placeholder="First name"]', data.firstName, {
+      delay: 200,
+    })
+    await page.type('input[placeholder="Last name"]', data.lastName, {
+      delay: 200,
+    })
+    await page.waitForTimeout(3000)
+
+    await Promise.all([page.waitForNavigation(), page.click('._143KU')])
+
+    // handle location
+    await page.waitForTimeout(3000)
+    await page.type('input[placeholder=Location]', data.location, {
+      delay: 200,
+    })
+    await page.waitForTimeout(6000)
+    await page.click('._28D4j')
+    await page.waitForTimeout(3000)
+
+    await Promise.all([page.waitForNavigation(), page.click('._143KU')])
+
+    // handle genre
+    await page.waitForTimeout(3000)
+    await page.waitForXPath(`//li[contains(., '${data.genre}')]`)
+    const genreButtons = await page.$x(`//li[contains(., '${data.genre}')]`)
+    const correctGenreButton = genreButtons[0]
+    await correctGenreButton.click({ delay: 200 })
+    await page.waitForTimeout(3000)
+    await Promise.all([page.waitForNavigation(), page.click('._143KU')])
+
+    // handle know your fan
+    await page.waitForTimeout(3000)
+    await Promise.all([page.waitForNavigation(), page.click('._143KU')])
+
+    // handle choose your deal
+    await page.waitForXPath(`//li[contains(., 'No upfront fee')]`)
+    const dealButtons = await page.$x(`//li[contains(., 'No upfront fee')]`)
+    const correctDealButton = dealButtons[0]
+
+    await page.waitForTimeout(3000)
+    await Promise.all([
+      page.waitForNavigation(),
+      correctDealButton.click({ delay: 200 }),
+    ])
+
+    // handle become a um artist
+    await page.waitForXPath(`//button[contains(., 'ACCEPT')]`)
+    const acceptButtons = await page.$x(`//button[contains(., 'ACCEPT')]`)
+    const correctAcceptButton = acceptButtons[0]
+
+    await page.waitForTimeout(3000)
+    await Promise.all([
+      page.waitForNavigation(),
+      correctAcceptButton.click({ delay: 200 }),
+    ])
+
     // push to usedData and remove from errorData if exist
-    usedData.push(data)
-    errorData = errorData.filter(
-      (da) => da.account.email !== data.account.email,
-    )
+    // usedData.push(data)
+    // errorData = errorData.filter(
+    //   (da) => da.account.email !== data.account.email,
+    // )
   } catch (error) {
     // add to error data if not exist
-    console.log('*** ERROR FOUND ***')
-    if (errorData.every((da) => da.account.email !== data.account.email)) {
-      errorData.push(data)
-    }
+    console.log('*** ERROR FOUND ***', error)
   }
 }
 
@@ -912,52 +739,51 @@ const enhancedHandleAutoProcesses = enhance(
   await checkSettings()
   console.log('-----HANDLE FRESH DATA START-----')
   try {
-    for (const account of accounts) {
-      const isAccountUsed = [...usedData, ...errorData].some(
-        (da) => da.account.email === account.email,
-      )
-      if (!isAccountUsed) {
-        const options = [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-          '--incognito',
-        ]
+    for (const datum of data) {
+      const options = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--incognito',
+      ]
+      const genData = await generateData(datum)
 
-        const data = await generateData(account)
-
-        if (proxies.length > 0) {
-          const proxy = getRandomFromArr(proxies, 1)[0]
-          options.push(`--proxy-server=${proxy}`)
-          data.usedProxy = proxy
-        }
-
-        const browser = await puppeteer.launch({
-          headless,
-          args: options,
-        })
-        const page = (await browser.pages())[0]
-        const cloakedPage = puppeteerCloak(page)
-
-        // block images and fonts
-        await optimize(page)
-        await page.setViewport({
-          width: 800,
-          height: 600,
-          deviceScaleFactor: 1,
-        })
-
-        await enhancedHandleAutoProcesses(page, data)
-        await handleSaveReportAndRemove()
-        if (!devMode) {
-          await browser.close()
-        }
-        await sleep(1500)
+      if (proxies.length > 0) {
+        const proxy = getRandomFromArr(proxies, 1)[0]
+        // const proxy = '84.21.191.196:80'
+        options.push(`--proxy-server=${proxy}`)
+        genData.usedProxy = proxy
       }
+      console.log('watch me genData', genData)
+
+      const browser = await puppeteer.launch({
+        headless,
+        args: options,
+      })
+      const page = (await browser.pages())[0]
+      const cloakedPage = puppeteerCloak(page)
+
+      // handle dialog
+      await optimize(page)
+      await page.setViewport({
+        width: 800,
+        height: 800,
+        deviceScaleFactor: 1,
+      })
+
+      // disable cache
+      await page.setCacheEnabled(false)
+
+      await enhancedHandleAutoProcesses(page, genData)
+      // await handleSaveReportAndRemove()
+      if (!devMode) {
+        await browser.close()
+      }
+      await sleep(1500)
     }
   } catch (error) {
     console.log('HANDLE FRESH DATA ERROR: ', error)
