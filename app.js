@@ -176,8 +176,21 @@ const generateData = async (data) => {
   // password
   const password = data.password
   // location
-
+  const allLocations = [
+    'amsterdam',
+    'london',
+    'berlin',
+    'munich',
+    'liverpool',
+    'manchester',
+    'roma',
+    'milan',
+    'derby',
+    'den haag',
+    'rotterdam',
+  ]
   // genre
+  const allGenres = ['Pop', 'Rock', 'Jazz', 'Dance', 'World']
 
   const genData = {
     verifyLink,
@@ -186,8 +199,8 @@ const generateData = async (data) => {
     artistName,
     email: data.email,
     password,
-    location: 'london',
-    genre: 'Pop',
+    location: getRandomFromArr(allLocations, 1)[0],
+    genre: getRandomFromArr(allGenres, 1)[0],
   }
   return genData
 }
@@ -212,12 +225,12 @@ const handleAutoProcesses = async (datum) => {
   let genData
   let browser
   let oldProxies
-  const maxProxyUsed = 2
+  const maxProxyUsed = 3
+  const maxRetryNumber = 10
 
   try {
-    const maxRetryNumber = 10
+    await sleep(getRandom(2000, 4000))
     let shouldCancel = false
-
     for (let retryNumber = 1; retryNumber <= maxRetryNumber; retryNumber++) {
       if (shouldCancel) {
         throw 'email already register'
@@ -274,19 +287,8 @@ const handleAutoProcesses = async (datum) => {
       // disable cache
       await page.setCacheEnabled(false)
 
-      // login
+      // create account
       await page.goto(genData.verifyLink)
-      // await page.waitForTimeout(getRandom(2000, 4000))
-      // await page.waitForSelector('input[placeholder=Password]')
-      // await page.type('input[placeholder=Password]', genData.password, {
-      //   delay: 200,
-      // })
-      // await page.waitForTimeout(getRandom(2000, 4000))
-      // await page.click('#terms', {
-      //   delay: 200,
-      // })
-
-      // await page.waitForTimeout(getRandom(2000, 4000))
 
       try {
         await page.waitForTimeout(getRandom(2000, 4000))
@@ -300,16 +302,13 @@ const handleAutoProcesses = async (datum) => {
         })
         await page.waitForTimeout(getRandom(2000, 4000))
 
-        if (getRandom(1, 10) < 4) {
-          await page.reload()
-          console.log('random reload 1')
-          throw 'random reload'
-        }
-
         page.setCacheEnabled(false)
         await Promise.all([
           page.waitForNavigation({ timeout: getRandom(25000, 35000) }),
-          page.click('button[type=submit]', { delay: 500 }),
+          page.click('button[type=submit]', { delay: 0 }),
+          page.click('button[type=submit]', { delay: 0 }),
+          page.click('button[type=submit]', { delay: 0 }),
+          page.click('button[type=submit]', { delay: 0 }),
           page.waitForResponse(async (response) => {
             try {
               if (response.status() === 400) {
@@ -419,6 +418,22 @@ const handleAutoProcesses = async (datum) => {
       correctAcceptButton.click({ delay: 200 }),
     ])
 
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url() === 'https://unitedmasters.com/api/v1/artists/me' &&
+          response.status() === 200,
+      ),
+      page.waitForResponse(
+        (response) =>
+          response.url() ===
+            'https://unitedmasters.com/me/releases/get-daily-streaming-performance-metrics-by-time-period?day_delta=weekly' &&
+          response.status() === 200,
+      ),
+    ])
+
+    await page.waitForTimeout(getRandom(15000, 30000))
+
     usedData.push(genData)
     errorData = errorData.filter((da) => da.verifyLink !== genData.verifyLink)
 
@@ -446,7 +461,7 @@ const handleSaveReportAndRemove = async () => {
     // remove in data.txt if moved to usedData
     const saveData = data
       .filter((datum) =>
-        usedData.every(
+        [...usedData, ...errorData].every(
           (usedDatum) => usedDatum.verifyLink !== datum.verifyLink,
         ),
       )
