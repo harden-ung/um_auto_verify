@@ -1,0 +1,25 @@
+diff --git a/node_modules/puppeteer/.local-chromium/win64-800071/chrome-win/debug.log b/node_modules/puppeteer/.local-chromium/win64-800071/chrome-win/debug.log
+new file mode 100644
+index 0000000..da1b4f9
+--- /dev/null
++++ b/node_modules/puppeteer/.local-chromium/win64-800071/chrome-win/debug.log
+@@ -0,0 +1,5 @@
++[0924/010518.857:ERROR:directory_reader_win.cc(43)] FindFirstFile: The system cannot find the path specified. (0x3)
++[0924/013715.675:ERROR:directory_reader_win.cc(43)] FindFirstFile: The system cannot find the path specified. (0x3)
++[0924/014837.530:ERROR:directory_reader_win.cc(43)] FindFirstFile: The system cannot find the path specified. (0x3)
++[0924/202919.175:ERROR:directory_reader_win.cc(43)] FindFirstFile: The system cannot find the path specified. (0x3)
++[0924/205309.223:ERROR:directory_reader_win.cc(43)] FindFirstFile: The system cannot find the path specified. (0x3)
+diff --git a/node_modules/puppeteer/lib/esm/puppeteer/common/ExecutionContext.js b/node_modules/puppeteer/lib/esm/puppeteer/common/ExecutionContext.js
+index 093dde3..295dc21 100644
+--- a/node_modules/puppeteer/lib/esm/puppeteer/common/ExecutionContext.js
++++ b/node_modules/puppeteer/lib/esm/puppeteer/common/ExecutionContext.js
+@@ -16,7 +16,8 @@
+ import { assert } from './assert.js';
+ import { helper } from './helper.js';
+ import { createJSHandle, JSHandle } from './JSHandle.js';
+-export const EVALUATION_SCRIPT_URL = '__puppeteer_evaluation_script__';
++// export const EVALUATION_SCRIPT_URL = '__puppeteer_evaluation_script__';
++export const EVALUATION_SCRIPT_URL = 'ni_hao_ma';
+ const SOURCE_URL_REGEX = /^[\040\t]*\/\/[@#] sourceURL=\s*(\S*?)\s*$/m;
+ /**
+  * This class represents a context for JavaScript execution. A [Page] might have

@@ -1,3 +1,5 @@
 node_modules
 settings.png
 data.txt
+reports/errorData.json
+reports/usedData.json

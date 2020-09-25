@@ -39,54 +39,19 @@ const data = rawData.map((rawDatum) => {
   return { email, password, verifyLink: `${verifyLink1}:${verifyLink2}` }
 })
 
-// // report json
-// const defaultErrorData = require('./reports/errorData.json')
-// const defaultUsedData = require('./reports/usedData.json')
+// report json
+const defaultErrorData = require('./reports/errorData.json')
+const defaultUsedData = require('./reports/usedData.json')
 
-// // app states
-// let usedData = [...defaultUsedData]
-// let errorData = [...defaultErrorData]
+// app states
+let usedData = [...defaultUsedData]
+let errorData = [...defaultErrorData]
 
 // support functions
 function checkForDuplicates(array) {
   return new Set(array).size !== array.length
 }
 const checkSettings = async () => {
-  // // no account
-  // if (rawAccounts.length === 0) {
-  //   console.log('***SETTINGS ERROR: NO ACCOUNTS***')
-  //   throw 'no accounts in accounts.txt'
-  // }
-
-  // // check supported genres folder exist
-  // const allGenreFolders = await fs.readdir(`./genres`)
-  // if (supportedGenres.some((genre) => !allGenreFolders.includes(genre))) {
-  //   console.log('***SETTINGS ERROR: ENSURE SUPPORTED GENRES FOLDER EXIST***')
-  //   throw 'no genres folder'
-  // }
-
-  // // check supported genres trackNames
-  // if (supportedGenres.some((genre) => !trackNames.hasOwnProperty(genre))) {
-  //   console.log(
-  //     '***SETTINGS ERROR: ENSURE SUPPORTED GENRES IN SETTINGS TRACKNAMES***',
-  //   )
-  //   throw 'no genres folder'
-  // }
-
-  // // check supported genres releaseNames
-  // if (supportedGenres.some((genre) => !releaseNames.hasOwnProperty(genre))) {
-  //   console.log(
-  //     '***SETTINGS ERROR: ENSURE SUPPORTED GENRES IN SETTINGS RELEASENAMES***',
-  //   )
-  //   throw 'ensure supported genres in releaseNames'
-  // }
-
-  // // check useVCC
-  // if (useVCC && rawVccs.length === 0) {
-  //   console.log('***SETTINGS ERROR: NO VCC***')
-  //   throw 'no vcc in vcc.txt'
-  // }
-
   console.log('settings checked!!!')
 }
 
@@ -168,149 +133,6 @@ const enhance = (processName, process) => {
   }
 }
 
-const getUnusedTracks = async (genre, noOfWantedTracks) => {
-  const allTracks = await fs.readdir(`./genres/${genre}`)
-  const avoidTracks = [...usedData, ...errorData]
-    .filter((da) => da.genre === genre)
-    .map((da) => da.tracks)
-    .flat()
-  // console.log('watch me avoidTracks', avoidTracks)
-  const cleanTracks = allTracks.filter(
-    (track) => !avoidTracks.some((avoidTrack) => avoidTrack.includes(track)),
-  )
-  // console.log('watch me cleanTracks', cleanTracks)
-  // handle error here
-  // transform
-  const tracks = getRandomFromArr(cleanTracks, noOfWantedTracks).map(
-    (track) => `genres/${genre}/${track}`,
-  )
-  // console.log('watch me tracks', tracks)
-  return tracks
-}
-const getUnusedArt = async () => {
-  // only get unused art
-  const allArts = await fs.readdir(`./arts`)
-  const avoidArts = [...usedData, ...errorData].map((da) => da.art)
-  const cleanArts = allArts.filter(
-    (art) => !avoidArts.some((avoidArt) => avoidArt.includes(art)),
-  )
-  // handle error here
-  const arts = getRandomFromArr(cleanArts, 1)
-  // transform
-  const art = arts.map((tempArt) => `arts/${tempArt}`)[0]
-  return art
-}
-const getUnunsedReleaseName = (genre) => {
-  // random release name
-  const allReleaseNames = releaseNames[genre]
-  const avoidReleaseNames = [...usedData, ...errorData]
-    .filter((da) => da.genre === genre)
-    .map((da) => da.releaseName)
-
-  const cleanReleaseNames = allReleaseNames.filter(
-    (releaseName) =>
-      !avoidReleaseNames.some((avoidReleaseName) =>
-        avoidReleaseName.includes(releaseName),
-      ),
-  )
-  let releaseName = ''
-  if (cleanReleaseNames.length < 1) {
-    releaseName = `${faker.address.streetName()} ${getRandomName(
-      faker.address.streetName(),
-      getRandom(3, 6),
-    )}`
-  } else {
-    releaseName = getRandomFromArr(cleanReleaseNames, 1)[0]
-  }
-  // WE CAN IMPROVE HERE
-  let improvedReleaseName = releaseName
-  return improvedReleaseName
-}
-const getUnusedSongWriter = () => {
-  //random song writer name
-  const allSongWriterNames = [...songWriterNames]
-  const avoidSongWriterNames = [...usedData, ...errorData].map(
-    (da) => da.songWriterName,
-  )
-  const cleanSongWriterNames = allSongWriterNames.filter(
-    (songWriterName) =>
-      !avoidSongWriterNames.some((avoidSongWriterName) =>
-        avoidSongWriterName.includes(songWriterNames),
-      ),
-  )
-
-  let songWriterName = ''
-  if (cleanSongWriterNames.length < 1) {
-    songWriterName = `${faker.name.firstName()} ${faker.name.lastName()} ${getRandomName(
-      faker.name.findName(),
-      getRandom(3, 6),
-    )}`
-  } else {
-    songWriterName = getRandomFromArr(cleanSongWriterNames, 1)[0]
-  }
-
-  return songWriterName
-}
-
-const getUnusedVCC = () => {
-  //random vcc
-  const allVccs = [...vccs]
-  const avoidVccs = [...usedData, ...errorData].map((da) => da.vcc)
-  const cleanVccs = allVccs.filter(
-    (vcc) =>
-      !avoidVccs.some((avoidVcc) => {
-        if (!avoidVcc) {
-          return false
-        }
-        if (avoidVcc && vcc) {
-          return avoidVcc.cardNumber === vcc.cardNumber
-        }
-        return false
-      }),
-  )
-  let vcc = null
-  if (cleanVccs.length < 1) {
-    throw 'no vcc left'
-  } else {
-    vcc = getRandomFromArr(cleanVccs, 1)[0]
-  }
-  return vcc
-}
-
-const getUnusedTrackNames = (genre, noOfWantedTracks) => {
-  // only get unsed trackNames
-  const allTrackNames = trackNames[genre]
-  const avoidTrackNames = [...usedData, ...errorData]
-    .filter((da) => da.genre === genre)
-    .map((da) => da.trackNames)
-    .flat()
-
-  const cleanTrackNames = allTrackNames.filter(
-    (trackName) =>
-      !avoidTrackNames.some((avoidTrackName) =>
-        avoidTrackName.includes(trackName),
-      ),
-  )
-
-  let trackNamesToUse = []
-  if (cleanTrackNames.length < noOfWantedTracks) {
-    trackNamesToUse = [...cleanTrackNames]
-    while (trackNamesToUse.length < noOfWantedTracks) {
-      trackNamesToUse.push(
-        `${faker.address.streetName()} ${getRandomName(
-          faker.address.streetName(),
-          getRandom(3, 6),
-        )}`,
-      )
-    }
-  } else {
-    trackNamesToUse = getRandomFromArr(cleanTrackNames, noOfWantedTracks)
-  }
-  // WE CAN IMPROVE HERE
-  let improvedTrackNames = trackNamesToUse
-  return improvedTrackNames
-}
-
 const generateData = async (data) => {
   // verifyLink
   const verifyLink = data.verifyLink
@@ -362,6 +184,7 @@ const generateData = async (data) => {
     firstName,
     lastName,
     artistName,
+    email: data.email,
     password,
     location: 'london',
     genre: 'Pop',
@@ -382,316 +205,196 @@ const optimize = async (page) => {
     await dialog.dismiss()
   })
 }
-const createRelease = async (page) => {
-  try {
-    // go to /upload
-    await page.waitForTimeout(3000)
-    await page.goto('https://unitedmasters.com/uploads', {
-      waitUntil: 'domcontentloaded',
-    })
-    // click create release
-    await page.waitForXPath("//p[contains(., 'Spotify')]", { visible: true })
-    const spotifyButtons = await page.$x("//p[contains(., 'Spotify')]")
-    const correctSpotifyButton = spotifyButtons[0]
-    await Promise.all([
-      page.waitForNavigation(),
-      correctSpotifyButton.click({ delay: 200 }),
-    ])
-  } catch (error) {
-    console.log('create release error', error)
-  }
-}
-const uploadFiles = async (
-  page,
-  files,
-  confirmRes,
-  timeout = 1200000,
-  selectorString = "//a[contains(., 'browse your')]",
-  numberOfRequest = 1,
-) => {
-  try {
-    // click upload input
-    await page.waitForXPath(selectorString, {
-      visible: true,
-    })
-    const inputUploadHandles = await page.$x(selectorString)
-    const inputUploadHandle = inputUploadHandles[0]
-
-    // upload files
-    const [fileChooser] = await Promise.all([
-      page.waitForFileChooser(),
-      inputUploadHandle.click({ delay: 200 }),
-    ])
-
-    console.log('uploading files')
-    await fileChooser.accept(files)
-
-    await page.waitForTimeout(2000)
-    let uploadConfirm
-    if (numberOfRequest > 1) {
-      let counter = 0
-      uploadConfirm = await page.waitForResponse(
-        (response) => {
-          if (response.url() === confirmRes) {
-            counter++
-          }
-          return counter === numberOfRequest
-        },
-        { timeout },
-      )
-    } else {
-      uploadConfirm = await page.waitForResponse(
-        (response) => {
-          return response.url() === confirmRes
-        },
-        { timeout },
-      )
-    }
-
-    console.log('upload files succeed:', uploadConfirm.ok())
-  } catch (error) {
-    console.log('upload files error', error)
-    throw 'upload files error'
-  }
-}
-const handleLowQualitySongs = async (page) => {
-  try {
-    await page.waitForXPath("//button[contains(., 'I understand')]", {
-      visible: true,
-      timeout: 5000,
-    })
-
-    const lowQualiTySongButtons = await page.$x(
-      "//button[contains(., 'I understand')]",
-    )
-    const lowQualiTySongButton = lowQualiTySongButtons[0]
-    if (lowQualiTySongButton) {
-      console.log('handle low quality songs')
-      await Promise.all([lowQualiTySongButton.click({ delay: 200 })])
-    }
-  } catch (error) {
-    console.log('no low quality')
-  }
-}
-const handleConnectionLost = async (page, tracks) => {
-  await page.waitForTimeout(3000)
-  try {
-    await page.waitForXPath("//div[contains(., 'Okay, got it')]", {
-      visible: true,
-      timeout: 10000,
-    })
-
-    const gotItButtons = await page.$x("//div[contains(., 'Okay, got it')]")
-    const gotItButton = gotItButtons[0]
-    if (gotItButton) {
-      console.log('handle connect lost')
-      throw 'connection lost'
-
-      // IMPROVE HANDLE CONNECTION LOSE HERE (NOT WORKING, NEED FIX)
-      // await Promise.all([
-      //   gotItButton.click({ delay: 200 }),
-      //   page.waitForNavigation(),
-      // ])
-
-      // const removesButtons = await page.$x(
-      //   '//*[name()="svg"]//*[local-name()="path" and @d="M7 11v2h10v-2H7zm5-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"]',
-      // )
-
-      // for (let i = 0; i < removesButtons.length; i++) {
-      //   if (removesButtons[i].isIntersectingViewport()) {
-      //     await removesButtons[i].click({ delay: 200 })
-      //     await page.waitForTimeout(1000)
-      //   }
-      // }
-
-      // await uploadFiles(
-      //   page,
-      //   tracks,
-      //   'https://unitedmasters.com/studio/create-track',
-      // )
-      // await handleLowQualitySongs(page)
-    }
-  } catch (error) {
-    if (error === 'connection lost') {
-      // throw to outer try catch (to stop program)
-      throw 'connection lost'
-    } else {
-      console.log('no connect lost')
-    }
-  }
-}
-const handleNext = async (page, correctIndex) => {
-  await page.waitForTimeout(3000)
-  try {
-    await page.waitForXPath("//button[contains(., 'Next')]")
-    const nextButtons = await page.$x("//button[contains(., 'Next')]")
-    const correctNextButton = nextButtons[correctIndex]
-    await Promise.all([
-      page.waitForNavigation(),
-      correctNextButton.click({ delay: 200 }),
-    ])
-    await page.waitForTimeout(3000)
-  } catch (error) {
-    console.log('handle next 1 error', error)
-    throw '500 Internal Service Error'
-  }
-}
-const handleSaveReportAndRemove = async () => {
-  try {
-    await fs.outputJson('./reports/errorData.json', errorData)
-    await fs.outputJson('./reports/usedData.json', usedData)
-
-    // remove art and tracks
-    for (const datum of usedData) {
-      await fs.remove(datum.art)
-      for (const track of datum.tracks) {
-        await fs.remove(track)
-      }
-    }
-
-    // remove in accounts.txt if moved to usedData
-    const saveAccounts = accounts
-      .filter((account) =>
-        usedData.every((datum) => datum.account.email !== account.email),
-      )
-      .map(({ email, password, genre, songWriterName }) => {
-        let result = `${email}:${password}`
-        if (genre) {
-          result += `:${genre}`
-        }
-        if (songWriterName) {
-          result += `:${songWriterName}`
-        }
-        return result
-      })
-      .join('\r\n')
-    await fs.writeFile('accounts.txt', saveAccounts, 'utf8')
-
-    // remove in songWriterNames.txt if moved to usedData
-    const saveSongWriterNames = songWriterNames
-      .filter((songWriterName) =>
-        usedData.every((datum) => datum.songWriterName !== songWriterName),
-      )
-      .join('\r\n')
-    await fs.writeFile('songWriterNames.txt', saveSongWriterNames, 'utf8')
-
-    // remove in vcc.txt if moved to usedData
-    const saveVccs = vccs
-      .filter((vcc) =>
-        usedData.every((datum) => {
-          if (!datum.vcc) {
-            return false
-          }
-          if (datum && vcc) {
-            return datum.cardNumber === vcc.cardNumber
-          }
-          return false
-        }),
-      )
-      .map(({ cardNumber, expiry, cvc, cardName }) => {
-        return `${cardNumber}:${expiry}:${cvc}:${cardName}`
-      })
-      .join('\r\n')
-    await fs.writeFile('vcc.txt', saveVccs, 'utf8')
-
-    console.log('save report and remove usedData')
-  } catch (err) {
-    console.error('save report error', error)
-  }
-}
 
 // main processes
+const handleAutoProcesses = async (datum) => {
+  let page
+  let genData
+  let browser
+  let oldProxies
+  const maxProxyUsed = 2
 
-// enhanced processes
-
-const handleAutoProcesses = async (page, data) => {
   try {
-    console.log('watch me start process')
+    const maxRetryNumber = 10
+    let shouldCancel = false
 
-    // login
-    await page.goto(data.verifyLink, {})
-    await page.waitForTimeout(3000)
-    await page.waitForSelector('input[placeholder=Password]')
-    await page.type('input[placeholder=Password]', data.password, {
-      delay: 200,
-    })
-    await page.click('#terms', {
-      delay: 200,
-    })
-
-    await page.waitForTimeout(3000)
-    await page.reload()
-
-    const maxRetryNumber = 100
     for (let retryNumber = 1; retryNumber <= maxRetryNumber; retryNumber++) {
+      if (shouldCancel) {
+        throw 'email already register'
+        break
+      }
+
+      // setup page
+      const options = [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--incognito',
+      ]
+      genData = await generateData(datum)
+
+      if (proxies.length > 0) {
+        let proxy
+        if (retryNumber <= maxProxyUsed) {
+          if (!oldProxies) {
+            proxy = getRandomFromArr(proxies, 1)[0]
+            oldProxies = proxy
+          } else {
+            proxy = oldProxies
+          }
+        } else {
+          proxy = getRandomFromArr(proxies, 1)[0]
+          oldProxies = proxy
+        }
+
+        options.push(`--proxy-server=${proxy}`)
+        genData.usedProxy = proxy
+      }
+      console.log('genData detail', genData)
+
+      browser = await puppeteer.launch({
+        headless,
+        args: options,
+      })
+      page = (await browser.pages())[0]
+      page = puppeteerCloak(page)
+
+      // handle dialog
+      await optimize(page)
+      await page.setViewport({
+        width: 800,
+        height: 800,
+        deviceScaleFactor: 1,
+      })
+
+      // disable cache
+      await page.setCacheEnabled(false)
+
+      // login
+      await page.goto(genData.verifyLink)
+      // await page.waitForTimeout(getRandom(2000, 4000))
+      // await page.waitForSelector('input[placeholder=Password]')
+      // await page.type('input[placeholder=Password]', genData.password, {
+      //   delay: 200,
+      // })
+      // await page.waitForTimeout(getRandom(2000, 4000))
+      // await page.click('#terms', {
+      //   delay: 200,
+      // })
+
+      // await page.waitForTimeout(getRandom(2000, 4000))
+
       try {
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(getRandom(2000, 4000))
+
         await page.waitForSelector('input[placeholder=Password]')
-        await page.type('input[placeholder=Password]', data.password, {
+        await page.type('input[placeholder=Password]', genData.password, {
           delay: 200,
         })
         await page.click('#terms', {
           delay: 200,
         })
-        await page.waitForTimeout(3000)
+        await page.waitForTimeout(getRandom(2000, 4000))
+
+        if (getRandom(1, 10) < 4) {
+          await page.reload()
+          console.log('random reload 1')
+          throw 'random reload'
+        }
+
         page.setCacheEnabled(false)
         await Promise.all([
-          page.waitForNavigation({ timeout: 30000 }),
+          page.waitForNavigation({ timeout: getRandom(25000, 35000) }),
           page.click('button[type=submit]', { delay: 500 }),
-          page.waitForResponse(
-            (response) =>
+          page.waitForResponse(async (response) => {
+            try {
+              if (response.status() === 400) {
+                shouldCancel = true
+                await page.waitForTimeout(getRandom(2000, 4000))
+                await Promise.reject()
+              }
+              if (retryNumber === maxRetryNumber && response.status() === 500) {
+                shouldCancel = true
+                await page.waitForTimeout(getRandom(2000, 4000))
+                await Promise.reject()
+                throw 'create account 400'
+              }
+              if (response.status() === 500) {
+                await page.waitForTimeout(getRandom(2000, 4000))
+                await Promise.reject()
+                throw 'create account 500'
+              }
+            } catch (e) {
+              if (e === 'create account 500') {
+                console.log('UM Internal Service Error, trying again...')
+              }
+              if (e === 'create account 400') {
+                console.log('email already register')
+              }
+            }
+
+            return (
               response
                 .url()
                 .includes('https://unitedmasters.com/account/accept-invite') &&
-              response.status() === 200,
-          ),
+              response.status() === 200
+            )
+          }),
         ])
 
         break
       } catch (e) {
-        await page.waitForTimeout(3000)
+        // go to this when there is 500
+        await page.waitForTimeout(getRandom(2000, 4000))
         page.setCacheEnabled(false)
-        await page.reload()
+        await browser.close()
+        await sleep(getRandom(2000, 4000))
       }
     }
 
     // handle info
-    await page.waitForTimeout(3000)
-    await page.type('input[placeholder="Artist name"]', data.artistName, {
+    await page.waitForTimeout(getRandom(2000, 4000))
+    await page.type('input[placeholder="Artist name"]', genData.artistName, {
       delay: 200,
     })
-    await page.type('input[placeholder="First name"]', data.firstName, {
+    await page.waitForTimeout(getRandom(2000, 4000))
+    await page.type('input[placeholder="First name"]', genData.firstName, {
       delay: 200,
     })
-    await page.type('input[placeholder="Last name"]', data.lastName, {
+    await page.waitForTimeout(getRandom(2000, 4000))
+    await page.type('input[placeholder="Last name"]', genData.lastName, {
       delay: 200,
     })
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
 
     await Promise.all([page.waitForNavigation(), page.click('._143KU')])
 
     // handle location
-    await page.waitForTimeout(3000)
-    await page.type('input[placeholder=Location]', data.location, {
+    await page.waitForTimeout(getRandom(2000, 4000))
+    await page.type('input[placeholder=Location]', genData.location, {
       delay: 200,
     })
     await page.waitForTimeout(6000)
     await page.click('._28D4j')
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
 
     await Promise.all([page.waitForNavigation(), page.click('._143KU')])
 
     // handle genre
-    await page.waitForTimeout(3000)
-    await page.waitForXPath(`//li[contains(., '${data.genre}')]`)
-    const genreButtons = await page.$x(`//li[contains(., '${data.genre}')]`)
+    await page.waitForTimeout(getRandom(2000, 4000))
+    await page.waitForXPath(`//li[contains(., '${genData.genre}')]`)
+    const genreButtons = await page.$x(`//li[contains(., '${genData.genre}')]`)
     const correctGenreButton = genreButtons[0]
     await correctGenreButton.click({ delay: 200 })
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
     await Promise.all([page.waitForNavigation(), page.click('._143KU')])
 
     // handle know your fan
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
     await Promise.all([page.waitForNavigation(), page.click('._143KU')])
 
     // handle choose your deal
@@ -699,7 +402,7 @@ const handleAutoProcesses = async (page, data) => {
     const dealButtons = await page.$x(`//li[contains(., 'No upfront fee')]`)
     const correctDealButton = dealButtons[0]
 
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
     await Promise.all([
       page.waitForNavigation(),
       correctDealButton.click({ delay: 200 }),
@@ -710,20 +413,53 @@ const handleAutoProcesses = async (page, data) => {
     const acceptButtons = await page.$x(`//button[contains(., 'ACCEPT')]`)
     const correctAcceptButton = acceptButtons[0]
 
-    await page.waitForTimeout(3000)
+    await page.waitForTimeout(getRandom(2000, 4000))
     await Promise.all([
       page.waitForNavigation(),
       correctAcceptButton.click({ delay: 200 }),
     ])
 
+    usedData.push(genData)
+    errorData = errorData.filter((da) => da.verifyLink !== genData.verifyLink)
+
+    await page.waitForTimeout(getRandom(2000, 4000))
+
+    if (!devMode) {
+      await browser.close()
+    }
+
     // push to usedData and remove from errorData if exist
-    // usedData.push(data)
-    // errorData = errorData.filter(
-    //   (da) => da.account.email !== data.account.email,
-    // )
   } catch (error) {
     // add to error data if not exist
-    console.log('*** ERROR FOUND ***', error)
+    console.log('*** ERROR FOUND ***')
+    if (errorData.every((da) => da.verifyLink !== genData.verifyLink)) {
+      errorData.push(genData)
+    }
+  }
+}
+
+const handleSaveReportAndRemove = async () => {
+  try {
+    await fs.outputJson('./reports/errorData.json', errorData)
+    await fs.outputJson('./reports/usedData.json', usedData)
+
+    // remove in data.txt if moved to usedData
+    const saveData = data
+      .filter((datum) =>
+        usedData.every(
+          (usedDatum) => usedDatum.verifyLink !== datum.verifyLink,
+        ),
+      )
+      .map(
+        ({ verifyLink, password, email }) =>
+          `${email}:${password}:${verifyLink}`,
+      )
+      .join('\r\n')
+    await fs.writeFile('data.txt', saveData, 'utf8')
+
+    console.log('save report and remove usedData')
+  } catch (err) {
+    console.error('save report error', error)
   }
 }
 
@@ -740,50 +476,8 @@ const enhancedHandleAutoProcesses = enhance(
   console.log('-----HANDLE FRESH DATA START-----')
   try {
     for (const datum of data) {
-      const options = [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu',
-        '--incognito',
-      ]
-      const genData = await generateData(datum)
-
-      if (proxies.length > 0) {
-        const proxy = getRandomFromArr(proxies, 1)[0]
-        // const proxy = '84.21.191.196:80'
-        options.push(`--proxy-server=${proxy}`)
-        genData.usedProxy = proxy
-      }
-      console.log('watch me genData', genData)
-
-      const browser = await puppeteer.launch({
-        headless,
-        args: options,
-      })
-      const page = (await browser.pages())[0]
-      const cloakedPage = puppeteerCloak(page)
-
-      // handle dialog
-      await optimize(page)
-      await page.setViewport({
-        width: 800,
-        height: 800,
-        deviceScaleFactor: 1,
-      })
-
-      // disable cache
-      await page.setCacheEnabled(false)
-
-      await enhancedHandleAutoProcesses(page, genData)
-      // await handleSaveReportAndRemove()
-      if (!devMode) {
-        await browser.close()
-      }
-      await sleep(1500)
+      await enhancedHandleAutoProcesses(datum)
+      await handleSaveReportAndRemove()
     }
   } catch (error) {
     console.log('HANDLE FRESH DATA ERROR: ', error)
