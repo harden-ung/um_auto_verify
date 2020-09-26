@@ -1,5 +1,6 @@
 node_modules
 settings.png
 data.txt
+proxies.txt
 reports/errorData.json
 reports/usedData.json
