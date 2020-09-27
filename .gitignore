@@ -1,6 +1,4 @@
 node_modules
 settings.png
 data.txt
-proxies.txt
-reports/errorData.json
-reports/usedData.json
+proxies.txtdebug.log $ git rm --cached debug.log rm debug.log $ git commit -m Start ignoring debug.log
