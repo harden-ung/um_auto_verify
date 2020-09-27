@@ -484,7 +484,7 @@ const handleSaveReportAndRemove = async () => {
 
     console.log('save report and remove usedData')
   } catch (err) {
-    console.error('save report error', error)
+    console.error('save report error', err)
   }
 }
 
