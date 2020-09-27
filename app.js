@@ -306,9 +306,6 @@ const handleAutoProcesses = async (datum) => {
         await Promise.all([
           page.waitForNavigation({ timeout: getRandom(25000, 35000) }),
           page.click('button[type=submit]', { delay: 0 }),
-          page.click('button[type=submit]', { delay: 0 }),
-          page.click('button[type=submit]', { delay: 0 }),
-          page.click('button[type=submit]', { delay: 0 }),
           page.waitForResponse(async (response) => {
             try {
               if (response.status() === 400) {
@@ -428,6 +425,18 @@ const handleAutoProcesses = async (datum) => {
         (response) =>
           response.url() ===
             'https://unitedmasters.com/me/releases/get-daily-streaming-performance-metrics-by-time-period?day_delta=weekly' &&
+          response.status() === 200,
+      ),
+      page.waitForResponse(
+        (response) =>
+          response.url() ===
+            'https://unitedmasters.com/welcome/complete-welcome-flow' &&
+          response.status() === 200,
+      ),
+      page.waitForResponse(
+        (response) =>
+          response.url() ===
+            'https://unitedmasters.com/artist-session/get-options' &&
           response.status() === 200,
       ),
     ])
