@@ -312,6 +312,7 @@ const handleAutoProcesses = async (datum) => {
                 shouldCancel = true
                 await page.waitForTimeout(getRandom(2000, 4000))
                 await Promise.reject()
+                throw 'create account 400'
               }
               if (retryNumber === maxRetryNumber && response.status() === 500) {
                 shouldCancel = true
