@@ -219,6 +219,17 @@ const optimize = async (page) => {
   })
 }
 
+const handleProxyType = async (page, proxy) => {
+  const [ip, port, username, password] = proxy.split(':')
+
+  if (username && password) {
+    await page.authenticate({
+      username: username,
+      password: password,
+    })
+  }
+}
+
 // main processes
 const handleAutoProcesses = async (datum) => {
   let page
@@ -264,7 +275,9 @@ const handleAutoProcesses = async (datum) => {
           oldProxies = proxy
         }
 
-        options.push(`--proxy-server=${proxy}`)
+        const [ip, port] = proxy.split(':')
+        options.push(`--proxy-server=${ip}:${port}`)
+
         genData.usedProxy = proxy
       }
       console.log('genData detail', genData)
@@ -283,6 +296,10 @@ const handleAutoProcesses = async (datum) => {
         height: 800,
         deviceScaleFactor: 1,
       })
+
+      if (proxies.length > 0) {
+        await handleProxyType(page, genData.usedProxy)
+      }
 
       // disable cache
       await page.setCacheEnabled(false)
